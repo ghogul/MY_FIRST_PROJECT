@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import math as m
+
 
 
 '''
@@ -39,7 +39,8 @@ nelm = 4
 isoparametric_edge = 4
 d_o_f = 2
 no_nodes = int((np.sqrt(nelm)+1)*(np.sqrt(nelm)+1))
-length_element = radius/np.sqrt(nelm)
+# length_element = 2.5
+
 
 
 # graphical representation of elements
@@ -53,12 +54,12 @@ yy,xx = np.meshgrid(nelm_length,nelm_radius)
 
 
 '''***shape function for isoparametric element***'''
-E1 = 1
-E2 = 1
+E1 = 0
+E2 = 0
 N = ([[(1-E1)/4,(1-E2)/4],
           [(1+E1)/4,(1-E2)/4],
-          [(1-E1)/4,(1+E2)/4],
-          [(1+E1)/4,(1+E2)/4]])
+          [(1+E1)/4,(1+E2)/4],
+          [(1-E1)/4,(1+E2)/4]])
 weight = 2
 
 '''***deriving all elements coordinates for the calculating jacobian***'''
@@ -79,6 +80,11 @@ for j in range(int(np.sqrt(nelm))):
 
 area = all_ele_coord[0,1,0]*all_ele_coord[0,2,1]    
 
+'''
+=========================================================================================================================================================
+                                                          material rotuine
+=========================================================================================================================================================
+'''
 
 def material_rotuine(poission_ratio, youngs_modulus,B_matrix,initial_displacement,global_plastic_strain,yield_stress,mu,lamda):
     epsilon = np.dot(B_matrix , initial_displacement)
@@ -94,12 +100,12 @@ def material_rotuine(poission_ratio, youngs_modulus,B_matrix,initial_displacemen
     trial_stress_equivalent = np.sqrt((3/2) * (np.sum(trial_stress_deviatoric)**2))
     # print(strain)
     if trial_stress_equivalent-yield_stress < 0:
-        print("elastic")
+        # print("elastic")
         stress = trial_stress
         return C, stress
 
     else:
-        print("plastic")
+        # print("plastic")
         delta_lamda = (trial_stress_equivalent-yield_stress)/(3*mu)
         current_stress = ((1/3)*np.sum(trial_stress)*np.ones(4).reshape(4,1)) + (((trial_stress_equivalent-(3*mu*delta_lamda)))/trial_stress_equivalent)*trial_stress_deviatoric
         current_stress_deviatoric = current_stress - (1/3)*np.sum(current_stress)
@@ -111,93 +117,109 @@ def material_rotuine(poission_ratio, youngs_modulus,B_matrix,initial_displacemen
         c_t_2nd = (2*mu)*((trial_stress_equivalent-(3*mu*delta_lamda))/trial_stress_equivalent)*identity_deviatoric
         c_t_3rd = (3*mu / (trial_stress_equivalent)**2)*(trial_stress_deviatoric*trial_stress_deviatoric.reshape(1,4))
         C_t = c_t_1st + c_t_2nd - c_t_3rd
-        return C_t,stress
+        return C_t, stress
 
-
+'''
+=========================================================================================================================================================
+                                                      element rotuine
+=========================================================================================================================================================
+'''
 # element rotuine
-def element_rotuine(E1,E2,all_ele_coord,N,area,weight):
-  k_all_ele = np.zeros((nelm,isoparametric_edge*2,isoparametric_edge*2))
-  internal_force_matrix_all_ele = np.zeros((nelm,8,1))
-  for i in range(nelm):
-    derivative_N = 1/4*np.matrix([[-(1-E2),(1-E2),-(1+E2),(1+E2)],
-                                [-(1-E1),-(1+E1),(1-E1),(1+E1)]])
-    x_y_ele = all_ele_coord[i]
-    jacobi_1 = derivative_N*x_y_ele
-    jacobi_inverse = np.linalg.inv(jacobi_1)
-    B_1_matrix = jacobi_inverse*derivative_N
-    radius = x_y_ele[1,0]
-    
-    N_1 = N_2 = N_3 = N_4 = 1/4
-    B_matrix = ([[B_1_matrix[0,0],0,B_1_matrix[0,1],0,B_1_matrix[0,2],0,B_1_matrix[0,3],0],
-                  [0,B_1_matrix[1,0],0,B_1_matrix[1,1],0,B_1_matrix[1,2],0,B_1_matrix[1,3]],
-                  [N_1/radius,0,N_2/radius,0,N_3/radius,0,N_4/radius,0],
-                  [B_1_matrix[1,0],B_1_matrix[0,0],B_1_matrix[1,1],B_1_matrix[0,1],B_1_matrix[1,2],B_1_matrix[0,2],B_1_matrix[1,3],B_1_matrix[0,3]]])
-    c_matrix,stress_matrix = material_rotuine(poission_ratio, youngs_modulus,B_matrix,initial_displacement,global_plastic_strain,yield_stress,mu,lamda)
-    K = weight*2*3.14*radius*area*(np.transpose(B_matrix)*c_matrix*B_matrix)*np.linalg.det(jacobi_1)
-    internal_force_matrix = weight*2*3.14*radius*area*np.transpose(B_matrix)*stress_matrix*np.linalg.det(jacobi_1)
-    internal_force_matrix_all_ele[i] = internal_force_matrix
-    k_all_ele[i] = K
-    
-    return k_all_ele,internal_force_matrix_all_ele
-
+def element_rotuine(E1,E2,all_ele_coord,N,area,weight,radius):
+    internal_force_matrix_all_ele = np.zeros((nelm,isoparametric_edge*2,1))
+    k_all_ele = np.zeros((nelm,isoparametric_edge*2,isoparametric_edge*2))
+    for i in range(nelm):
+        derivative_N = 1/4*np.matrix([[-(1-E2),(1-E2),(1+E2),-(1+E2)],
+                                    [-(1-E1),-(1+E1),(1+E1),(1-E1)]])
+        x_y_ele = all_ele_coord[i]
+        jacobi_1 = derivative_N*x_y_ele
+        jacobi_inverse = np.linalg.inv(jacobi_1)
+        B_1_matrix = jacobi_inverse*derivative_N
+        ele_radius = (x_y_ele[0,0]+x_y_ele[1,0]+x_y_ele[2,0]+x_y_ele[3,0])/isoparametric_edge
+        
+        
+        N_1 = N_2 = N_3 = N_4 = 1/4
+        B_matrix = np.matrix([[B_1_matrix[0,0],0,B_1_matrix[0,1],0,B_1_matrix[0,2],0,B_1_matrix[0,3],0],
+                            [0,B_1_matrix[1,0],0,B_1_matrix[1,1],0,B_1_matrix[1,2],0,B_1_matrix[1,3]],
+                            [N_1/ele_radius,0,N_2/ele_radius,0,N_3/ele_radius,0,N_4/ele_radius,0],
+                            [B_1_matrix[1,0],B_1_matrix[0,0],B_1_matrix[1,1],B_1_matrix[0,1],B_1_matrix[1,2],B_1_matrix[0,2],B_1_matrix[1,3],B_1_matrix[0,3]]])
+        c_matrix,stress_matrix = material_rotuine(poission_ratio, youngs_modulus,B_matrix,initial_displacement,global_plastic_strain,yield_stress,mu,lamda)
+        k_1 = 2*3.14*ele_radius
+        k_2 = np.dot(c_matrix,B_matrix)
+        k_3 = np.dot(np.transpose(B_matrix),k_2)
+        k_all_ele[i] = weight*weight*k_1*k_3*np.linalg.det(jacobi_1)
+        internal_force_matrix = weight*2*3.14*radius*area*np.transpose(B_matrix)*stress_matrix*np.linalg.det(jacobi_1)
+        internal_force_matrix_all_ele[i] = internal_force_matrix
+        
+    return k_all_ele , internal_force_matrix_all_ele                       
+'''
+=========================================================================================================================================================
+                                                               external force
+=========================================================================================================================================================
+'''
 # finding the external forces of the elements
-def external_force(f_ext,length_element,nelm,all_ele_coord,i,all_external_force):
-    if i < 2:
-        all_external_force[i] = (np.zeros((isoparametric_edge*2,1)))
+def external_force(f_ext,nelm,all_ele_coord,i,external_force_ele,radius):
+    if i < int(nelm-(np.sqrt(nelm))):
+        external_force_ele[i] = (np.zeros((isoparametric_edge*2,1)))
         return (np.zeros((isoparametric_edge*2,1)))
 
     else:
-        x_y_ele = all_ele_coord[i]
-        radius = x_y_ele[1,0]
-        external_force = (2*3.14*radius*(length_element/2)*f_ext*(1/4))*np.transpose(np.matrix([0,0,0,0,0,4,0,4]))
-        all_external_force[i] = external_force
+        # x_y_ele = all_ele_coord[i]
+        ele_radius = radius/int(np.sqrt(nelm))
+        ele_length = radius/int(np.sqrt(nelm))
+        external_force = 2*3.14*ele_radius*((ele_length/2)*f_ext*(1/4))*np.transpose(np.matrix([0,0,0,0,0,4,0,4]))
+        external_force_ele[i] = external_force
         return (external_force)   
     
-    
-all_external_force = np.zeros((nelm,8,1))
-for i in range(nelm):
-    external_force(f_ext,length_element,nelm,all_ele_coord,i,all_external_force)
-
-
-# nodes of the elements
-x_cells = int(np.sqrt(nelm))
-y_cells = int(np.sqrt(nelm))
-elements = np.arange((x_cells+1)*(y_cells+1)).reshape(y_cells+1,x_cells+1)
-ID = ([])
-for i in range(y_cells):
-    for j in range(x_cells):
-        id = np.matrix([elements[i,j],elements[i,j+1],elements[i+1,j],elements[i+1,j+1]])
-        ID = np.append(ID,id)
- 
-
-
-sum = ([])  
-for i in ID:
-    multi = np.array([(i*2),((i*2)+1)])
-    sum = np.append(sum,multi)
-
-sum = sum.astype(int)
-a_column = sum.flatten().reshape(nelm,isoparametric_edge*d_o_f)
-
-
-
-#  assignment matrix for all the elements
-a_rows = (np.arange(isoparametric_edge*d_o_f)).astype(int)
-all_a = np.zeros((nelm,isoparametric_edge*d_o_f , no_nodes*d_o_f))
-for k in range(nelm):
-  a = np.zeros((isoparametric_edge*d_o_f , no_nodes*d_o_f))
-  for i,j in zip(a_rows,a_column[k]):
-    a[i,j] = 1
-  all_a[k] = a
-
+'''
+==========================================================================================================================================================
+                                                      assignment matrix
+==========================================================================================================================================================
+'''
+def assignment_matrix(nelm,isoparametric_edge,d_o_f):
+    # nodes of the elements
+    x_cells = int(np.sqrt(nelm))
+    y_cells = int(np.sqrt(nelm))
+    elements = np.arange((x_cells+1)*(y_cells+1)).reshape(y_cells+1,x_cells+1)
+    # for i in range(0,(x_cells+1),1):
+    #     if i % 2 != 0:
+    #         elements_1 = elements[i]
+    #         elements[i] = elements_1[::-1]
+    ID = ([])
+    for i in range(y_cells):
+        for j in range(x_cells):
+            id = np.matrix([elements[i,j],elements[i,j+1],elements[i+1,j],elements[i+1,j+1]])
+            ID = np.append(ID,id)
+    sum = ([])  
+    for i in ID:
+        multi = np.array([(i*2),((i*2)+1)])
+        sum = np.append(sum,multi)
+    sum = sum.astype(int)
+    a_column = sum.flatten().reshape(nelm,isoparametric_edge*d_o_f)
+    # print(sum)
+    #  assignment matrix for all the elements
+    a_rows = (np.arange(isoparametric_edge*d_o_f)).astype(int)
+    all_a = np.zeros((nelm,isoparametric_edge*d_o_f , no_nodes*d_o_f))
+    for k in range(nelm):
+        a = np.zeros((isoparametric_edge*d_o_f , no_nodes*d_o_f))
+        for i,j in zip(a_rows,a_column[k]):
+            a[i,j] = 1
+        all_a[k] = a
+    return all_a
+'''==============================================================================================================='''
+# all_k_ele = element_rotuine(E1,E2,all_ele_coord,N,area,weight)
 # # calculating global stiffness matrix
 # k_global = 0
 # for i in range(nelm):
 #   assembly_1 = np.dot(np.transpose(all_a[i]),all_k_ele[i])
 #   assembly = np.dot(assembly_1,all_a[i])
 #   k_global = k_global + assembly
-
-
+# print(k_global)
+'''
+==============================================================================================================================
+                      assembly and newton-raphson 
+==============================================================================================================================
+'''
 
 initial_displacement = np.random.rand((isoparametric_edge*2),1)
 global_plastic_strain = np.zeros((isoparametric_edge,1))
@@ -207,10 +229,155 @@ while True:
     if tau > (total_time-time_step):
        break
     
-    element_stiffness_matrix,element_internal_force_matrix = element_rotuine(E1,E2,all_ele_coord,N,area,weight)
-    print(element_internal_force_matrix)
+    k_ele, internal_force_matrix_ele = element_rotuine(E1,E2,all_ele_coord,N,area,weight,radius)
+    external_force_ele = np.zeros((nelm,8,1))
+    for i in range(nelm):
+        external_force(f_ext,nelm,all_ele_coord,i,external_force_ele,radius)
+
+    all_a = assignment_matrix(nelm,isoparametric_edge,d_o_f)
+    #assembly
+    global_stiffness_matrix = np.zeros((18,18))
+    global_internal_force_matrix = 0
+    global_external_force_matrix = 0
+    for i in range(nelm):
+        assembly_1 = np.dot((np.transpose(all_a[i])),k_ele[i])
+        assembly = np.dot(assembly_1,all_a[i])
+        global_stiffness_matrix = global_stiffness_matrix + assembly
+        
 
 
+        global_internal_force_matrix = global_internal_force_matrix + np.dot((np.transpose(all_a[i])),internal_force_matrix_ele[i])
+        global_external_force_matrix = global_external_force_matrix + np.dot((np.transpose(all_a[i])),external_force_ele[i])
+
+
+    G_matrix = global_internal_force_matrix - global_external_force_matrix
+
+
+    reduced_global_stiffness_matrix_1 = global_stiffness_matrix[2:,2:]
+    reduced_global_stiffness_matrix_2 = np.delete(reduced_global_stiffness_matrix_1,1,1)
+    reduced_global_stiffness_matrix_3 = np.delete(reduced_global_stiffness_matrix_2,1,0)
+    reduced_global_stiffness_matrix_4 = np.delete(reduced_global_stiffness_matrix_3,2,1)
+    reduced_global_stiffness_matrix_5 = np.delete(reduced_global_stiffness_matrix_4,2,0)
+    reduced_global_stiffness_matrix_6 = np.delete(reduced_global_stiffness_matrix_5,2,1)
+    reduced_global_stiffness_matrix_7 = np.delete(reduced_global_stiffness_matrix_6,2,0)
+    reduced_global_stiffness_matrix_8 = np.delete(reduced_global_stiffness_matrix_7,7,1)
+    reduced_global_stiffness_matrix = np.delete(reduced_global_stiffness_matrix_8,7,0)
+
+
+    reduced_G_matrix_1 = np.delete(G_matrix,0,0)
+    reduced_G_matrix_2 = np.delete(reduced_G_matrix_1,0,0)
+    reduced_G_matrix_3 = np.delete(reduced_G_matrix_2,1,0)
+    reduced_G_matrix_4 = np.delete(reduced_G_matrix_3,2,0)
+    reduced_G_matrix_5 = np.delete(reduced_G_matrix_4,2,0)
+    reduced_G_matrix = np.delete(reduced_G_matrix_5,7,0)
+
+    delta_displacement = np.dot(np.linalg.inv(reduced_global_stiffness_matrix),reduced_G_matrix)
+    # global_displacement = delta_displacement - initial_displacement
+    # initial_displacement = global_displacement
+    # print(global_displacement)
+    # if (np.linalg.norm(delta_displacement,np.inf) > (0.005 * np.linalg.norm(global_displacement,np.inf))):
+        # break
+
+
+
+
+   
+
+
+
+
+
+                                                                                                                                      
+
+print(np.linalg.inv(global_stiffness_matrix))
+
+
+
+
+
+
+# initial_displacement = np.random.rand((isoparametric_edge*2),1)
+# global_plastic_strain = np.zeros((isoparametric_edge,1))
+# k_all_ele= element_rotuine(E1,E2,all_ele_coord,N,area,weight,radius)
+# # print(k_all_ele)
+# all_a = assignment_matrix(nelm,isoparametric_edge,d_o_f)
+
+# global_stiffness_matrix = 0
+# for i in range(nelm):
+#     assembly_1 = np.dot((np.transpose(all_a[i])),k_all_ele[i])
+#     assembly = np.dot(assembly_1,all_a[i])
+#     global_stiffness_matrix = global_stiffness_matrix + assembly
+
+# print((all_a))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# print(k_global)
 
  
 # while tau <(total_time-time_step):
@@ -221,10 +388,10 @@ while True:
 #         initial_displacement[0] = initial_displacement[1] = 0
 #         print(element_rotuine(E1,E2,all_ele_coord,N,area))
 
+# print(all_a[0])
 
 
 
-print(all_external_force)
 
 
 

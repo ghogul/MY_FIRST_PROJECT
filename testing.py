@@ -312,4 +312,4 @@ while True:
 
                                                                                                                                       
 
-print(internal_force_matrix_ele)
+print(np.linalg.det(global_stiffness_matrix))

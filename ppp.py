@@ -24,7 +24,7 @@ time_step = 0.1
 total_time = 1
 
 '''***EXTERNAL LOADING***'''
-f_ext = 400  #Mpa
+f_ext = 500  #Mpa
 yield_stress = 350 #Mpa
 
 
@@ -52,13 +52,13 @@ yy,xx = np.meshgrid(nelm_length,nelm_radius)
 
 
 '''***shape function for isoparametric element***'''
-# E1 = 0
-# E2 = 0
-# N = ([[(1-E1)/4,(1-E2)/4],
-#           [(1+E1)/4,(1-E2)/4],
-#           [(1+E1)/4,(1+E2)/4],
-#           [(1-E1)/4,(1+E2)/4]])
-# weight = 1
+E1 = 0
+E2 = 0
+N = ([[(1-E1)/4,(1-E2)/4],
+          [(1+E1)/4,(1-E2)/4],
+          [(1+E1)/4,(1+E2)/4],
+          [(1-E1)/4,(1+E2)/4]])
+weight = 1
 
 '''
 ================================================================================================================================================================================================
@@ -243,7 +243,7 @@ def external_force(f_ext,nelm,i,external_force_ele,radius):
         # x_y_ele = all_ele_coord[i]
         ele_radius = radius/int(np.sqrt(nelm))
         ele_length = radius/int(np.sqrt(nelm))
-        external_force = 2*3.14*ele_radius*((ele_length/2)*f_ext*(1/4))*np.transpose(np.matrix([0,0,0,0,0,4,0,4]))
+        external_force = 2*np.pi*ele_radius*((ele_length/2)*f_ext*(1/4))*np.transpose(np.matrix([0,0,0,0,0,4,0,4]))
         external_force_ele[i] = external_force
         return (external_force)   
 
@@ -366,7 +366,7 @@ while True:
 
 # print(k_ele)                                                                                                                                
 
-print(np.linalg.det(k_ele[1]))
+print((global_external_force_matrix))
 
 
 

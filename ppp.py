@@ -146,20 +146,20 @@ def element_rotuine(radius):
         k_all = np.zeros((isoparametric_edge*2,isoparametric_edge*2))
         for j in range(4):
             if j == 0:
-                E1 = -(int(np.sqrt(1/3)))
-                E2 = -(int(np.sqrt(1/3)))
+                E1 = -((np.sqrt(1/3)))
+                E2 = -((np.sqrt(1/3)))
 
             elif j == 1:
-                E1 = +(int(np.sqrt(1/3)))
-                E2 = -(int(np.sqrt(1/3)))
+                E1 = +((np.sqrt(1/3)))
+                E2 = -((np.sqrt(1/3)))
 
             elif j == 2:
-                E1 = +(int(np.sqrt(1/3)))
-                E2 = +(int(np.sqrt(1/3)))
+                E1 = +((np.sqrt(1/3)))
+                E2 = +((np.sqrt(1/3)))
 
             elif j == 3:
-                E1 = -(int(np.sqrt(1/3)))
-                E2 = +(int(np.sqrt(1/3)))
+                E1 = -((np.sqrt(1/3)))
+                E2 = +((np.sqrt(1/3)))
                 
             derivative_N = 1/4*np.matrix([[-(1-E2),(1-E2),(1+E2),-(1+E2)],
                                           [-(1-E1),-(1+E1),(1+E1),(1-E1)]])
@@ -366,7 +366,7 @@ while True:
 
 # print(k_ele)                                                                                                                                
 
-print((internal_force_matrix_ele))
+print(np.linalg.det(k_ele[1]))
 
 
 

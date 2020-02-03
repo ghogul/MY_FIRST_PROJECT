@@ -55,13 +55,13 @@ yy,xx = np.meshgrid(nelm_length,nelm_radius)
 
 
 '''***shape function for isoparametric element***'''
-E1 = 0
-E2 = 0
-N = ([[(1-E1)/4,(1-E2)/4],
-          [(1+E1)/4,(1-E2)/4],
-          [(1+E1)/4,(1+E2)/4],
-          [(1-E1)/4,(1+E2)/4]])
-weight = 2
+# E1 = 0
+# E2 = 0
+# N = ([[(1-E1)/4,(1-E2)/4],
+#           [(1+E1)/4,(1-E2)/4],
+#           [(1+E1)/4,(1+E2)/4],
+#           [(1-E1)/4,(1+E2)/4]])
+# weight = 2
 '''***deriving all elements coordinates for the calculating jacobian***'''
 all_ele_coord = np.zeros((nelm,4,2))
 loop = 0
@@ -181,7 +181,11 @@ for k in range(nelm):
 
 # print(all_a)
 
-
+'''
+===============================================================================================================
+                          reduced G matrix
+================================================================================================================
+'''
 
 # k = np.array([[1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
 #               [0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
@@ -223,7 +227,9 @@ for k in range(nelm):
 # reduced_9 = np.delete(reduced_8,7,0)
 # print(reduced_9.shape)
 
-
+'''
+================================================================================================================================================
+'''
 
 
 # a = np.array([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18])
@@ -238,7 +244,9 @@ for k in range(nelm):
 # h = np.delete(g,7,0)
 # print(h.shape)
 
-
+'''
+===================================================================================================================================================
+'''
 
 
 '''
@@ -338,30 +346,56 @@ C = c_1*np.matrix([[1-poission_ratio,poission_ratio,poission_ratio,0],
 
 
 k_all = np.zeros((nelm,isoparametric_edge*2,isoparametric_edge*2))
-k = np.zeros((nelm,isoparametric_edge*2,isoparametric_edge*2))
+# k = np.zeros((nelm,isoparametric_edge*2,isoparametric_edge*2))
 for i in range(nelm):
-    derivative_N = 1/4*np.matrix([[-(1-E2),(1-E2),(1+E2),-(1+E2)],
-                                  [-(1-E1),-(1+E1),(1+E1),(1-E1)]])
-    x_y_ele = all_ele_coord[i]
-    jacobi_1 = derivative_N*x_y_ele
-    jacobi_inverse = np.linalg.inv(jacobi_1)
-    B_1_matrix = jacobi_inverse*derivative_N
-    for i in range(nelm):
-        if i == 1 & 3:
-            radius = 1.25
-        else:
-            radius = 3.75
-    
-    N_1 = N_2 = N_3 = N_4 = 1/4
-    B_matrix = np.matrix([[B_1_matrix[0,0],0,B_1_matrix[0,1],0,B_1_matrix[0,2],0,B_1_matrix[0,3],0],
-                  [0,B_1_matrix[1,0],0,B_1_matrix[1,1],0,B_1_matrix[1,2],0,B_1_matrix[1,3]],
-                  [N_1/radius,0,N_2/radius,0,N_3/radius,0,N_4/radius,0],
-                  [B_1_matrix[1,0],B_1_matrix[0,0],B_1_matrix[1,1],B_1_matrix[0,1],B_1_matrix[1,2],B_1_matrix[0,2],B_1_matrix[1,3],B_1_matrix[0,3]]])
+    k = np.zeros((isoparametric_edge*2,isoparametric_edge*2))
+    for j in range(nelm):
+        if j == 0:
+            E1 = -(int(np.sqrt(1/3)))
+            E2 = -(int(np.sqrt(1/3)))
 
-    k_1 = 2*3.14*radius
-    k_2 = np.dot(C,B_matrix)
-    k_3 = np.dot(np.transpose(B_matrix),k_2)
-    k_all[i] = k_1*k_3*weight*weight*np.linalg.det(jacobi_1)
+        elif j == 1:
+            E1 = +(int(np.sqrt(1/3)))
+            E2 = -(int(np.sqrt(1/3)))
+
+        elif j == 2:
+            E1 = +(int(np.sqrt(1/3)))
+            E2 = +(int(np.sqrt(1/3)))
+
+        elif j == 3:
+            E1 = -(int(np.sqrt(1/3)))
+            E2 = +(int(np.sqrt(1/3)))
+
+        weight = 1
+        derivative_N = 1/4*np.matrix([[-(1-E2),(1-E2),(1+E2),-(1+E2)],
+                                    [-(1-E1),-(1+E1),(1+E1),(1-E1)]])
+        x_y_ele = all_ele_coord[i]
+        jacobi_1 = derivative_N*x_y_ele
+        jacobi_inverse = np.linalg.inv(jacobi_1)
+        B_1_matrix = jacobi_inverse*derivative_N
+        for a in range(nelm):
+            if a == 1 & 3:
+                radius = 1.25
+            else:
+                radius = 3.75
+        
+        N_1 = N_2 = N_3 = N_4 = 1/4
+        B_matrix = np.matrix([[B_1_matrix[0,0],0,B_1_matrix[0,1],0,B_1_matrix[0,2],0,B_1_matrix[0,3],0],
+                    [0,B_1_matrix[1,0],0,B_1_matrix[1,1],0,B_1_matrix[1,2],0,B_1_matrix[1,3]],
+                    [N_1/radius,0,N_2/radius,0,N_3/radius,0,N_4/radius,0],
+                    [B_1_matrix[1,0],B_1_matrix[0,0],B_1_matrix[1,1],B_1_matrix[0,1],B_1_matrix[1,2],B_1_matrix[0,2],B_1_matrix[1,3],B_1_matrix[0,3]]])
+
+        k_1 = 2*3.14*radius
+        k_2 = np.dot(C,B_matrix)
+        k_3 = np.dot(np.transpose(B_matrix),k_2)
+        k = k + k_1*k_3*weight*weight*np.linalg.det(jacobi_1)
+        # print(E1,E2)
+        # print(k)
+    # k_all[i] = k
+    # print(i,j)
+# print(k_all)
+    # print(k_all)
+    # k_all[i] = k
     # k[i] = weight*2*3.14*radius*np.transpose(B_matrix)*C*B_matrix*np.linalg.det(jacobi_1)
     
     
@@ -620,19 +654,19 @@ a_4 = np.matrix([[0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0], #5
 
 
 
-assembly_1 = np.dot((np.transpose(a_1)),k_all[0])
-assembly_one = np.dot(assembly_1,a_1)
+# assembly_1 = np.dot((np.transpose(a_1)),k_all[0])
+# assembly_one = np.dot(assembly_1,a_1)
 
-assembly_2 = np.dot((np.transpose(a_2)),k_all[1])
-assembly_two = np.dot(assembly_2,a_2)
+# assembly_2 = np.dot((np.transpose(a_2)),k_all[1])
+# assembly_two = np.dot(assembly_2,a_2)
 
-assembly_3 = np.dot((np.transpose(a_3)),k_all[2])
-assembly_three = np.dot(assembly_3,a_3)
+# assembly_3 = np.dot((np.transpose(a_3)),k_all[2])
+# assembly_three = np.dot(assembly_3,a_3)
 
-assembly_4 = np.dot((np.transpose(a_4)),k_all[3])
-assembly_four = np.dot(assembly_4,a_4)
+# assembly_4 = np.dot((np.transpose(a_4)),k_all[3])
+# assembly_four = np.dot(assembly_4,a_4)
 
-total = assembly_one + assembly_two + assembly_three + assembly_four
+# total = assembly_one + assembly_two + assembly_three + assembly_four
 # print((total[8,8]))
 # print((total[8,9]))
 # print((total[9,8]))
@@ -659,7 +693,7 @@ total = assembly_one + assembly_two + assembly_three + assembly_four
 # print()
 # print(assembly_one)
 # print((assembly_one+assembly_two+assembly_three+assembly_four))
-# print(np.linalg.det(assembly_one+assembly_two+assembly_three+assembly_four))
+# print(np.linalg.inv(assembly_one+assembly_two+assembly_three+assembly_four))
 '''
 (1,2,4,5),(2,3,5,6),(4,5,7,8),(5,6,8,9)
 and 
@@ -675,32 +709,32 @@ have same assembly of (18,18) with np.ones
 ===============================================================================================================================
 '''
                 ##1,1,2,2,3,3,4,4,5,5,6,6
-a_1 = np.matrix([[1,0,0,0,0,0,0,0,0,0,0,0], #1
-                 [0,1,0,0,0,0,0,0,0,0,0,0], #1
-                 [0,0,1,0,0,0,0,0,0,0,0,0], #2
-                 [0,0,0,1,0,0,0,0,0,0,0,0], #2
-                 [0,0,0,0,0,0,1,0,0,0,0,0], #4
-                 [0,0,0,0,0,0,0,1,0,0,0,0], #4
-                 [0,0,0,0,0,0,0,0,1,0,0,0], #5
-                 [0,0,0,0,0,0,0,0,0,1,0,0]])#5
+# a_1 = np.matrix([[1,0,0,0,0,0,0,0,0,0,0,0], #1
+#                  [0,1,0,0,0,0,0,0,0,0,0,0], #1
+#                  [0,0,1,0,0,0,0,0,0,0,0,0], #2
+#                  [0,0,0,1,0,0,0,0,0,0,0,0], #2
+#                  [0,0,0,0,0,0,1,0,0,0,0,0], #4
+#                  [0,0,0,0,0,0,0,1,0,0,0,0], #4
+#                  [0,0,0,0,0,0,0,0,1,0,0,0], #5
+#                  [0,0,0,0,0,0,0,0,0,1,0,0]])#5
 
-                ##1,1,2,2,3,3,4,4,5,5,6,6
-a_2 = np.matrix([[0,0,1,0,0,0,0,0,0,0,0,0], #2
-                 [0,0,0,1,0,0,0,0,0,0,0,0], #2                                                                                                  
-                 [0,0,0,0,1,0,0,0,0,0,0,0], #3
-                 [0,0,0,0,0,1,0,0,0,0,0,0], #3
-                 [0,0,0,0,0,0,0,0,1,0,0,0], #5
-                 [0,0,0,0,0,0,0,0,0,1,0,0], #5
-                 [0,0,0,0,0,0,0,0,0,0,1,0], #6                                                                                                                                                                             
-                 [0,0,0,0,0,0,0,0,0,0,0,1]])#6
+#                 ##1,1,2,2,3,3,4,4,5,5,6,6
+# a_2 = np.matrix([[0,0,1,0,0,0,0,0,0,0,0,0], #2
+#                  [0,0,0,1,0,0,0,0,0,0,0,0], #2                                                                                                  
+#                  [0,0,0,0,1,0,0,0,0,0,0,0], #3
+#                  [0,0,0,0,0,1,0,0,0,0,0,0], #3
+#                  [0,0,0,0,0,0,0,0,1,0,0,0], #5
+#                  [0,0,0,0,0,0,0,0,0,1,0,0], #5
+#                  [0,0,0,0,0,0,0,0,0,0,1,0], #6                                                                                                                                                                             
+#                  [0,0,0,0,0,0,0,0,0,0,0,1]])#6
 
                                                            
 
-assembly_1 = np.dot((np.transpose(a_1)),k_all[0])                                                                                                                         
-assembly_one = np.dot(assembly_1,a_1)
+# assembly_1 = np.dot((np.transpose(a_1)),k_all[0])                                                                                                                         
+# assembly_one = np.dot(assembly_1,a_1)
 
-assembly_2 = np.dot((np.transpose(a_2)),k_all[1])
-assembly_two = np.dot(assembly_2,a_2)
+# assembly_2 = np.dot((np.transpose(a_2)),k_all[1])
+# assembly_two = np.dot(assembly_2,a_2)
 
 
 # print(np.linalg.det(assembly_one+assembly_two))
@@ -720,8 +754,123 @@ for two elements its working properly, global stiffness is singular before reduc
 # print(np.allclose(k_all[0],k_all[3]))
 
 
-a = all_ele_coord[0]
+# a = all_ele_coord[0]
 
-print(a[0,0])
-print(a[1,0])
+# print(a[0,0])
+# print(a[1,0])
 
+# area = all_ele_coord[0,1,0]*all_ele_coord[0,2,1] 
+# print(area)
+
+
+# print(all_ele_coord)
+
+# nelm = 1
+# for i in range(nelm):
+#     E1 = 0
+#     E2 = 0
+#     weight = 2
+#     derivative_N = 1/4*np.matrix([[-(1-E2),(1-E2),(1+E2),-(1+E2)],
+#                                 [-(1-E1),-(1+E1),(1+E1),(1-E1)]])
+#     x_y_ele = all_ele_coord[i]
+#     jacobi_1 = derivative_N*x_y_ele
+#     jacobi_inverse = np.linalg.inv(jacobi_1)
+#     B_1_matrix = jacobi_inverse*derivative_N
+#     ele_radius = (x_y_ele[0,0]+x_y_ele[1,0]+x_y_ele[2,0]+x_y_ele[3,0])/isoparametric_edge
+#     area = all_ele_coord[0,1,0]*all_ele_coord[0,2,1] 
+#     N_1 = N_2 = N_3 = N_4 = 1/4
+#     B_matrix = np.matrix([[B_1_matrix[0,0],0,B_1_matrix[0,1],0,B_1_matrix[0,2],0,B_1_matrix[0,3],0],
+#                         [0,B_1_matrix[1,0],0,B_1_matrix[1,1],0,B_1_matrix[1,2],0,B_1_matrix[1,3]],
+#                         [N_1/ele_radius,0,N_2/ele_radius,0,N_3/ele_radius,0,N_4/ele_radius,0],
+#                         [B_1_matrix[1,0],B_1_matrix[0,0],B_1_matrix[1,1],B_1_matrix[0,1],B_1_matrix[1,2],B_1_matrix[0,2],B_1_matrix[1,3],B_1_matrix[0,3]]])
+#     c_1 = (youngs_modulus)/((1+poission_ratio)*(1-(2*poission_ratio)))
+#     C = c_1*np.matrix([[1-poission_ratio,poission_ratio,poission_ratio,0],
+#                     [poission_ratio,1-poission_ratio,poission_ratio,0],
+#                     [poission_ratio,poission_ratio,1-poission_ratio,0],
+#                     [0,0,0,((1-2*poission_ratio)/2)]])
+#     k_1 = 2*np.pi*ele_radius*area
+#     k_2 = np.dot(C,B_matrix)
+#     k_3 = np.dot(np.transpose(B_matrix),k_2)
+#     k = weight*weight*k_1*k_3*np.linalg.det(jacobi_1)
+
+#     print((k))
+
+
+nelm = 4
+k_all = np.zeros([nelm,8,8])
+for i in range(nelm):
+    k = 0
+    for j in range(4):
+        if j == 0:
+            E1 = -((np.sqrt(1/3)))
+            E2 = -((np.sqrt(1/3)))
+
+        elif j == 1:
+            E1 = +((np.sqrt(1/3)))
+            E2 = -((np.sqrt(1/3)))
+
+        elif j == 2:
+            E1 = +((np.sqrt(1/3)))
+            E2 = +((np.sqrt(1/3)))
+
+        elif j == 3:
+            E1 = -((np.sqrt(1/3)))
+            E2 = +((np.sqrt(1/3)))
+        
+        # print(E1,E2)
+
+        weight = 1
+        derivative_N = 1/4*np.matrix([[-(1-E2),(1-E2),(1+E2),-(1+E2)],
+                                    [-(1-E1),-(1+E1),(1+E1),(1-E1)]])
+        x_y_ele = all_ele_coord[i]
+        jacobi_1 = derivative_N*x_y_ele
+        
+        # print(derivative_N)
+        jacobi_1[0,1] = 0
+        jacobi_1[1,0] = 0
+        # print(jacobi_1)
+        jacobi_inverse = np.linalg.inv(jacobi_1)
+        # print(jacobi_inverse)
+        B_1_matrix = jacobi_inverse*derivative_N
+        # print(B_1_matrix)
+        ele_radius = (x_y_ele[0,0]+x_y_ele[1,0]+x_y_ele[2,0]+x_y_ele[3,0])/isoparametric_edge
+        area = all_ele_coord[0,1,0]*all_ele_coord[0,2,1] 
+        N_1 = N_2 = N_3 = N_4 = 1/4
+        # print(ele_radius)
+        B_matrix = np.matrix([[B_1_matrix[0,0],0,B_1_matrix[0,1],0,B_1_matrix[0,2],0,B_1_matrix[0,3],0],
+                            [0,B_1_matrix[1,0],0,B_1_matrix[1,1],0,B_1_matrix[1,2],0,B_1_matrix[1,3]],
+                            [N_1/ele_radius,0,N_2/ele_radius,0,N_3/ele_radius,0,N_4/ele_radius,0],
+                            [B_1_matrix[1,0],B_1_matrix[0,0],B_1_matrix[1,1],B_1_matrix[0,1],B_1_matrix[1,2],B_1_matrix[0,2],B_1_matrix[1,3],B_1_matrix[0,3]]])
+        c_1 = (youngs_modulus)/((1+poission_ratio)*(1-(2*poission_ratio)))
+        C = c_1*np.matrix([[1-poission_ratio,poission_ratio,poission_ratio,0],
+                        [poission_ratio,1-poission_ratio,poission_ratio,0],
+                        [poission_ratio,poission_ratio,1-poission_ratio,0],
+                        [0,0,0,((1-2*poission_ratio)/2)]])
+        k_1 = 2*np.pi*ele_radius*area
+        k_2 = np.dot(C,B_matrix)
+        k_3 = np.dot(np.transpose(B_matrix),k_2)
+        k = k + weight*weight*k_1*k_3*np.linalg.det(jacobi_1)
+    k_all[i] = k 
+# print(k_all)
+'''
+=================================================================================================================================================================
+'''
+# print(np.linalg.eig(k_all))
+
+# for i in range(4):
+#     print((k_all[i]-k_all[i].T))
+
+assembly_1 = np.dot((np.transpose(a_1)),k_all[0])
+assembly_one = np.dot(assembly_1,a_1)
+
+assembly_2 = np.dot((np.transpose(a_2)),k_all[1])
+assembly_two = np.dot(assembly_2,a_2)
+
+assembly_3 = np.dot((np.transpose(a_3)),k_all[2])
+assembly_three = np.dot(assembly_3,a_3)
+
+assembly_4 = np.dot((np.transpose(a_4)),k_all[3])
+assembly_four = np.dot(assembly_4,a_4)
+
+total = assembly_one + assembly_two + assembly_three + assembly_four
+print(np.linalg.eig(total))

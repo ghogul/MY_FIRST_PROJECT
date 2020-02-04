@@ -52,12 +52,12 @@ yy,xx = np.meshgrid(nelm_length,nelm_radius)
 
 
 '''***shape function for isoparametric element***'''
-E1 = 0
-E2 = 0
-N = ([[(1-E1)/4,(1-E2)/4],
-          [(1+E1)/4,(1-E2)/4],
-          [(1+E1)/4,(1+E2)/4],
-          [(1-E1)/4,(1+E2)/4]])
+# E1 = 0
+# E2 = 0
+# N = ([[(1-E1)/4,(1-E2)/4],
+#           [(1+E1)/4,(1-E2)/4],
+#           [(1+E1)/4,(1+E2)/4],
+#           [(1-E1)/4,(1+E2)/4]])
 weight = 1
 
 '''
@@ -366,7 +366,7 @@ while True:
 
 # print(k_ele)                                                                                                                                
 
-print((global_external_force_matrix))
+print(np.unique(global_stiffness_matrix - global_stiffness_matrix.T))
 
 
 

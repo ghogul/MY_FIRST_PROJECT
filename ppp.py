@@ -320,25 +320,25 @@ def assignment_matrix(nelm,isoparametric_edge,d_o_f):
 ================================================================================================================================================================================================
 '''
 all_a,summation = assignment_matrix(nelm,isoparametric_edge,d_o_f)
-global_displacement = np.array([[ 0.00000000e+00],
-                                [ 0.00000000e+00],
-                                [-2.29747886e-05],
-                                [ 0.00000000e+00],
-                                [-4.42676271e-05],
-                                [ 0.00000000e+00],
-                                [ 0.00000000e+00],
-                                [ 6.87719851e-04],
-                                [-1.90950872e-05],
-                                [ 6.85590208e-04],
-                                [-2.33514134e-05],
-                                [ 6.85101819e-04],
-                                [ 0.00000000e+00],
-                                [ 1.34326650e-03],
-                                [-1.36614683e-05],
-                                [ 1.33450682e-03],
-                                [ 5.24633588e-06],
-                                [ 1.33341851e-03]])
-
+# global_displacement = np.array([[ 0.00000000e+00],
+#                                 [ 0.00000000e+00],
+#                                 [-2.29747886e-05],
+#                                 [ 0.00000000e+00],
+#                                 [-4.42676271e-05],
+#                                 [ 0.00000000e+00],
+#                                 [ 0.00000000e+00],
+#                                 [ 6.87719851e-04],
+#                                 [-1.90950872e-05],
+#                                 [ 6.85590208e-04],
+#                                 [-2.33514134e-05],
+#                                 [ 6.85101819e-04],
+#                                 [ 0.00000000e+00],
+#                                 [ 1.34326650e-03],
+#                                 [-1.36614683e-05],
+#                                 [ 1.33450682e-03],
+#                                 [ 5.24633588e-06],
+#                                 [ 1.33341851e-03]])
+global_displacement = np.zeros((18,1)) 
 # print(global_displacement)
 a = np.array([])
 for i in summation:
@@ -381,7 +381,7 @@ while True:
 
         print("global internal",global_internal_force_matrix)
         G_matrix = global_internal_force_matrix - (global_external_force_matrix*tau)
-
+        # print("external force",global_external_force_matrix*tau)
 
         reduced_global_stiffness_matrix_1 = global_stiffness_matrix[2:,2:]
         reduced_global_stiffness_matrix_2 = np.delete(reduced_global_stiffness_matrix_1,1,1)
@@ -400,9 +400,9 @@ while True:
         reduced_G_matrix_4 = np.delete(reduced_G_matrix_3,2,0)
         reduced_G_matrix_5 = np.delete(reduced_G_matrix_4,2,0)
         reduced_G_matrix   = np.delete(reduced_G_matrix_5,7,0)
-
+        print("reduced g",reduced_G_matrix)
         delta_displacement = np.dot(np.linalg.inv(reduced_global_stiffness_matrix),(-reduced_G_matrix))
-        print(delta_displacement)
+        # print(delta_displacement)
         delta_displacement = np.insert(delta_displacement,0,0)
         delta_displacement = np.insert(delta_displacement,1,0)
         delta_displacement = np.insert(delta_displacement,3,0)
@@ -429,9 +429,11 @@ while True:
         # print(initial_displacement)
         # global_plastic_strain = plastic_strain
         # print(delta_displacement)
-        print("delta_displacement",(np.linalg.norm(reduced_G_matrix,np.inf)))
-        print("global", (0.005*np.linalg.norm(global_internal_force_matrix,np.inf)))
-        if (np.linalg.norm(delta_displacement,np.inf) < (0.005 * np.linalg.norm(global_displacement,np.inf))) and ((np.linalg.norm(reduced_G_matrix,np.inf)) <= (0.005*np.linalg.norm(global_internal_force_matrix,np.inf))):
+        print("delta displacement",np.linalg.norm(delta_displacement,np.inf))
+        print("global dispkacement",(0.005 * np.linalg.norm(global_displacement,np.inf)))
+        print("reduced G",(np.linalg.norm(reduced_G_matrix,np.inf)))
+        print("global internal", (0.005*np.linalg.norm(global_internal_force_matrix,np.inf)))
+        if (np.linalg.norm(delta_displacement,np.inf) < (0.005 * np.linalg.norm(global_displacement,np.inf))) and ((np.linalg.norm(reduced_G_matrix,np.inf)) < (0.005*np.linalg.norm(global_internal_force_matrix,np.inf))):
             break
     
     # global_plastic_strain = np.random.random((8,1))

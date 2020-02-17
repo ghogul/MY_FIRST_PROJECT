@@ -110,14 +110,14 @@ def material_rotuine(poission_ratio, youngs_modulus,B_matrix,initial_displacemen
                       [0,0,0,((1-poission_ratio)/2)]])
     
     elastic_strain = strain - global_plastic_strain[i]
-    
+    # print("material rotuine")
     # print("STrain:",strain)
     # print("C:",C)
     trial_stress = np.dot(C,elastic_strain)
     # print("TRIAL:",trial_stress)
     trial_stress_deviatoric = np.copy(trial_stress)
     trial_stress_deviatoric[:3] = trial_stress[:3] - ((1/3)*(trial_stress[0]+trial_stress[1]+trial_stress[2]))
-    # print("trial_devi",trial_stress_deviatoric)
+    # print("trial_deviatoric",trial_stress_deviatoric)
     
     trial_stress_equivalent = (np.sqrt(((3/2) * np.dot(trial_stress_deviatoric.T,trial_stress_deviatoric)))).item()
     # print(trial_stress)
@@ -160,10 +160,12 @@ def material_rotuine(poission_ratio, youngs_modulus,B_matrix,initial_displacemen
 '''
 # element rotuine
 def element_rotuine(radius):
+    internal_force_matrix_all_ele = np.zeros((nelm,isoparametric_edge*2,1))
     k_all_ele = np.zeros((nelm,isoparametric_edge*2,isoparametric_edge*2))
     all_ele_coord = elements_coordinates(nelm,nelm_length,nelm_radius)
     for i in range(nelm):
-        # print("i",i)
+        # print("elements",i)
+        internal_force_matrix = 0
         k_all = np.zeros((isoparametric_edge*2,isoparametric_edge*2))
         for j in range(4):
             # print("j",j)
@@ -193,21 +195,23 @@ def element_rotuine(radius):
             ele_radius = (x_y_ele[0,0]+x_y_ele[1,0]+x_y_ele[2,0]+x_y_ele[3,0])/isoparametric_edge
             area = all_ele_coord[0,1,0]*all_ele_coord[0,2,1]    
             weight = 1
-            N_1 = N_2 = N_3 = N_4 = 1/4
+            # N_1 = N_2 = N_3 = N_4 = 1/4
             B_matrix = np.matrix([[B_1_matrix[0,0],0,B_1_matrix[0,1],0,B_1_matrix[0,2],0,B_1_matrix[0,3],0],
                                 [0,B_1_matrix[1,0],0,B_1_matrix[1,1],0,B_1_matrix[1,2],0,B_1_matrix[1,3]],
-                                [N_1/ele_radius,0,N_2/ele_radius,0,N_3/ele_radius,0,N_4/ele_radius,0],
+                                [((1-E1)*(1-E2)/4)/ele_radius,0,((1+E1)*(1-E2)/4)/ele_radius,0,((1+E1)*(1+E2)/4)/ele_radius,0,((1-E1)*(1+E2)/4)/ele_radius,0],
                                 [B_1_matrix[1,0],B_1_matrix[0,0],B_1_matrix[1,1],B_1_matrix[0,1],B_1_matrix[1,2],B_1_matrix[0,2],B_1_matrix[1,3],B_1_matrix[0,3]]])
             c_matrix,stress_matrix = material_rotuine(poission_ratio, youngs_modulus,B_matrix,initial_displacement,i,global_plastic_strain,yield_stress,mu,lamda)
             k_1 = 2*np.pi*ele_radius*area
             k_2 = np.dot(c_matrix,B_matrix)
             k_3 = np.dot(np.transpose(B_matrix),k_2)
             k_all = k_all + weight*weight*k_1*k_3*np.linalg.det(jacobi_1)
+            internal_force_matrix = internal_force_matrix + weight*weight*2*np.pi*ele_radius*area*np.transpose(B_matrix)*stress_matrix*np.linalg.det(jacobi_1)
             
         k_all_ele[i] = k_all
+        internal_force_matrix_all_ele[i] = internal_force_matrix
         
         
-    return k_all_ele                   
+    return k_all_ele, internal_force_matrix_all_ele                 
 
 '''
 ================================================================================================================================================================================================
@@ -218,31 +222,35 @@ def element_rotuine(radius):
 ================================================================================================================================================================================================
 '''
 # element rotuine
-def internal_force(radius):
-    internal_force_matrix_all_ele = np.zeros((nelm,isoparametric_edge*2,1))
-    all_ele_coord = elements_coordinates(nelm,nelm_length,nelm_radius)
-    for i in range(nelm):
-        E1 = 0
-        E2 = 0
-        derivative_N = 1/4*np.matrix([[-(1-E2),(1-E2),(1+E2),-(1+E2)],
-                                      [-(1-E1),-(1+E1),(1+E1),(1-E1)]])
-        x_y_ele = all_ele_coord[i]
-        jacobi_1 = derivative_N*x_y_ele
-        jacobi_inverse = np.linalg.inv(jacobi_1)
-        B_1_matrix = jacobi_inverse*derivative_N
-        ele_radius = (x_y_ele[0,0]+x_y_ele[1,0]+x_y_ele[2,0]+x_y_ele[3,0])/isoparametric_edge
-        area = all_ele_coord[0,1,0]*all_ele_coord[0,2,1]    
-        weight = 2
-        N_1 = N_2 = N_3 = N_4 = 1/4
-        B_matrix = np.matrix([[B_1_matrix[0,0],0,B_1_matrix[0,1],0,B_1_matrix[0,2],0,B_1_matrix[0,3],0],
-                            [0,B_1_matrix[1,0],0,B_1_matrix[1,1],0,B_1_matrix[1,2],0,B_1_matrix[1,3]],
-                            [N_1/ele_radius,0,N_2/ele_radius,0,N_3/ele_radius,0,N_4/ele_radius,0],
-                            [B_1_matrix[1,0],B_1_matrix[0,0],B_1_matrix[1,1],B_1_matrix[0,1],B_1_matrix[1,2],B_1_matrix[0,2],B_1_matrix[1,3],B_1_matrix[0,3]]])
-        c_matrix,stress_matrix = material_rotuine(poission_ratio, youngs_modulus,B_matrix,initial_displacement,i,global_plastic_strain,yield_stress,mu,lamda)
-        internal_force_matrix = weight*weight*2*np.pi*ele_radius*area*np.transpose(B_matrix)*stress_matrix*np.linalg.det(jacobi_1)
-        internal_force_matrix_all_ele[i] = internal_force_matrix
+# def internal_force(radius):
+#     internal_force_matrix_all_ele = np.zeros((nelm,isoparametric_edge*2,1))
+#     all_ele_coord = elements_coordinates(nelm,nelm_length,nelm_radius)
+#     for i in range(nelm):
+#         E1 = 0
+#         E2 = 0
+#         derivative_N = 1/4*np.matrix([[-(1-E2),(1-E2),(1+E2),-(1+E2)],
+#                                       [-(1-E1),-(1+E1),(1+E1),(1-E1)]])
+#         print(["der shape function", derivative_N])
+#         x_y_ele = all_ele_coord[i]
+#         jacobi_1 = derivative_N*x_y_ele
+#         print("jacobi",jacobi_1)
+#         jacobi_inverse = np.linalg.inv(jacobi_1)
+#         print("jacobi_inverse",jacobi_inverse)
+#         B_1_matrix = jacobi_inverse*derivative_N
+#         ele_radius = (x_y_ele[0,0]+x_y_ele[1,0]+x_y_ele[2,0]+x_y_ele[3,0])/isoparametric_edge
+#         area = all_ele_coord[0,1,0]*all_ele_coord[0,2,1]    
+#         weight = 2
+#         N_1 = N_2 = N_3 = N_4 = 1/4
+#         B_matrix = np.matrix([[B_1_matrix[0,0],0,B_1_matrix[0,1],0,B_1_matrix[0,2],0,B_1_matrix[0,3],0],
+#                             [0,B_1_matrix[1,0],0,B_1_matrix[1,1],0,B_1_matrix[1,2],0,B_1_matrix[1,3]],
+#                             [N_1/ele_radius,0,N_2/ele_radius,0,N_3/ele_radius,0,N_4/ele_radius,0],
+#                             [B_1_matrix[1,0],B_1_matrix[0,0],B_1_matrix[1,1],B_1_matrix[0,1],B_1_matrix[1,2],B_1_matrix[0,2],B_1_matrix[1,3],B_1_matrix[0,3]]])
+#         print("b matrix",B_matrix)
+#         c_matrix,stress_matrix = material_rotuine(poission_ratio, youngs_modulus,B_matrix,initial_displacement,i,global_plastic_strain,yield_stress,mu,lamda)
+#         internal_force_matrix = weight*weight*2*np.pi*ele_radius*area*np.transpose(B_matrix)*stress_matrix*np.linalg.det(jacobi_1)
+#         internal_force_matrix_all_ele[i] = internal_force_matrix
         
-    return internal_force_matrix_all_ele                       
+#     return internal_force_matrix_all_ele                       
 
 '''
 ================================================================================================================================================================================================
@@ -340,6 +348,7 @@ all_a,summation = assignment_matrix(nelm,isoparametric_edge,d_o_f)
 #                                 [ 1.33341851e-03]])
 global_displacement = np.zeros((18,1)) 
 # print(global_displacement)
+
 a = np.array([])
 for i in summation:
     a = np.append(a,global_displacement[i])
@@ -350,7 +359,7 @@ time = 0
 while True:
     tau = tau + time_step
     time += 1
-    print("tau",tau)
+    print("time",tau)
     if tau > (total_time-time_step):
         break
 # for i in range(0,1,10):
@@ -359,9 +368,9 @@ while True:
     while True:
         loop += 1
         print("loop",loop)
-        k_ele = element_rotuine(radius)
+        k_ele,internal_force_matrix_ele = element_rotuine(radius)
         # print(k_ele)
-        internal_force_matrix_ele = internal_force(radius)
+        # internal_force_matrix_ele
         external_force_ele = np.zeros((nelm,isoparametric_edge*d_o_f,1))
         for i in range(nelm):
             external_force(f_ext,nelm,i,external_force_ele,radius)
@@ -379,7 +388,9 @@ while True:
             global_internal_force_matrix = global_internal_force_matrix + np.dot((np.transpose(all_a[i])),internal_force_matrix_ele[i])
             global_external_force_matrix = global_external_force_matrix + np.dot((np.transpose(all_a[i])),external_force_ele[i])
 
-        print("global internal",global_internal_force_matrix)
+        # print("global internal",global_internal_force_matrix)
+        # print("global external",global_external_force_matrix)
+        # print("global stiffness",global_stiffness_matrix)
         G_matrix = global_internal_force_matrix - (global_external_force_matrix*tau)
         # print("external force",global_external_force_matrix*tau)
 
@@ -413,7 +424,7 @@ while True:
         # print("delta displac",delta_displacement)
         # print("global_before",global_displacement)
         global_displacement =  global_displacement + delta_displacement 
-        # print("global_after",global_displacement)
+        print("global_displacement",global_displacement)
         # print("delta displac",delta_displacement.shape)
         # print("reduced g matrix",reduced_G_matrix)
         # print(global_internal_force_matrix)

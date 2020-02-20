@@ -14,8 +14,8 @@ youngs_modulus = 210000 #Mpa
 
 
 '''***GEOMETRICAL PARAMETER***'''
-length = 70  #mm
-radius = 5   #mm
+length = 50  #mm
+radius = 0.1   #mm
 
 
 '''***TIME PARAMETERS***'''
@@ -25,7 +25,8 @@ total_time = 1
 
 '''***EXTERNAL LOADING***'''
 f_ext = 700  #Mpa
-yield_stress = 350 #Mpa
+yield_stress = 345 #Mpa    mild steel
+
 
 
 '''***lame's constant***'''
@@ -99,10 +100,10 @@ def elements_coordinates(nelm,nelm_length,nelm_radius):
 '''
 
 def material_rotuine(poission_ratio, youngs_modulus,B_matrix,initial_displacement,i,global_plastic_strain,yield_stress,mu,lamda):
-    # print("initial",(initial_displacement[i]))
+    # print("plastic strain",global_plastic_strain)
     epsilon = np.dot(B_matrix , initial_displacement[i])
     strain = epsilon
-    # print("strain",strain)
+    print("strain",strain)
     c_1 = (youngs_modulus)/((1+poission_ratio)*(1-2*poission_ratio))
     C = c_1*np.array([[1-poission_ratio,poission_ratio,poission_ratio,0],
                       [poission_ratio,1-poission_ratio,poission_ratio,0],
@@ -125,14 +126,15 @@ def material_rotuine(poission_ratio, youngs_modulus,B_matrix,initial_displacemen
     # print(C)
     # print(trial_stress)
     # # print(strain)
-    print("eq_stress",trial_stress_equivalent)
+    # print("eq_stress",trial_stress_equivalent)
     if trial_stress_equivalent-yield_stress < 0:
-        print("elastic")
+        # print("elastic")
+        print("C",C)
         stress = trial_stress
         return C, stress
 
     else:
-        print("plastic")
+        # print("plastic")
         delta_lamda = (trial_stress_equivalent-yield_stress)/(3*mu)
         # print(delta_lamda)
         # print(np.asscalar((trial_stress_equivalent-(3*mu*delta_lamda))/trial_stress_equivalent))
@@ -149,7 +151,8 @@ def material_rotuine(poission_ratio, youngs_modulus,B_matrix,initial_displacemen
         c_t_2nd = (2*mu)*((trial_stress_equivalent-(3*mu*delta_lamda))/trial_stress_equivalent)*identity_deviatoric
         c_t_3rd = (3*mu / (trial_stress_equivalent)**2)*(trial_stress_deviatoric*trial_stress_deviatoric.reshape(1,4))
         C_t = c_t_1st + c_t_2nd - c_t_3rd
-        # print(C_t)
+        # C_t[3,0] = C_t[3,1] = C_t[3,2] = C_t[0,3] = C_t[1,3] = C_t[2,3] = 0
+        print("C_t",C_t)
         return C_t, stress
 '''
 ================================================================================================================================================================================================
@@ -348,6 +351,7 @@ all_a,summation = assignment_matrix(nelm,isoparametric_edge,d_o_f)
 #                                 [ 5.24633588e-06],
 #                                 [ 1.33341851e-03]])
 global_displacement = np.zeros((no_nodes*d_o_f,1)) 
+global_plastic_strain = np.zeros((nelm,isoparametric_edge,1))
 plastic_strain = np.zeros((nelm,isoparametric_edge,1))
 G_matrix = 0
 # print(global_displacement)
@@ -356,7 +360,7 @@ a = np.array([])
 for i in summation:
     a = np.append(a,global_displacement[i])
 initial_displacement = a.reshape((nelm,isoparametric_edge*d_o_f,1))
-global_plastic_strain = np.zeros((nelm,isoparametric_edge,1))
+
 
 time = 0
 while True:
@@ -368,13 +372,14 @@ while True:
         break
 # for i in range(0,1,10):
     print("="*30)
-    
+    # plastic_strain = np.zeros((nelm,isoparametric_edge,1))
     loop = 0
     while True:
         loop += 1
         print("="*30)
         print("loop",loop)
         print("="*30)
+        # print("plastic strain", plastic_strain)
         k_ele,internal_force_matrix_ele = element_rotuine(radius)
         # print(k_ele)
         # internal_force_matrix_ele
@@ -397,10 +402,10 @@ while True:
 
         
         # print("global stiffness",global_stiffness_matrix)
-        G_matrix = G_matrix + (global_internal_force_matrix - (global_external_force_matrix*tau))
+        G_matrix =  (global_internal_force_matrix - (global_external_force_matrix*tau))
         # print("global internal",global_internal_force_matrix)
         # print("global external",global_external_force_matrix*tau)
-        # print("G matrix",G_matrix)
+        print("G matrix",G_matrix)
 
         reduced_global_stiffness_matrix_1 = global_stiffness_matrix[2:,2:]
         reduced_global_stiffness_matrix_2 = np.delete(reduced_global_stiffness_matrix_1,1,1)
@@ -421,6 +426,7 @@ while True:
         reduced_G_matrix   = np.delete(reduced_G_matrix_5,7,0)
         # print("reduced g",reduced_G_matrix)
         delta_displacement = np.dot(np.linalg.inv(reduced_global_stiffness_matrix),(-reduced_G_matrix))
+        # print("stiffness matrix",np.linalg.inv(reduced_global_stiffness_matrix))
         # print("delta displacement",delta_displacement)
         delta_displacement = np.insert(delta_displacement,0,0)
         delta_displacement = np.insert(delta_displacement,1,0)
@@ -432,7 +438,7 @@ while True:
         # print("delta displacement",delta_displacement)
         # print("global_before",global_displacement)
         global_displacement =  global_displacement + delta_displacement 
-        print("global_displacement",global_displacement)
+        # print("global_displacement",global_displacement)
         # print("delta displac",delta_displacement.shape)
         # print("reduced g matrix",reduced_G_matrix)
         # print(global_internal_force_matrix)
@@ -445,16 +451,17 @@ while True:
         # print(global_displacement_ele)
         # print(loop)
         initial_displacement = np.copy(global_displacement_ele)
-        
+        # global_plastic_strain = plastic_strain
+        print("global plastic strain", global_plastic_strain)
         # print(initial_displacement)
         # global_plastic_strain = plastic_strain
         # print(delta_displacement)
-        # print("delta displacement",np.linalg.norm(delta_displacement,np.inf))
-        # print("global dispkacement",(0.005 * np.linalg.norm(global_displacement,np.inf)))
-        # print("reduced G",(np.linalg.norm(reduced_G_matrix,np.inf)))
-        # print("global internal", (0.005*np.linalg.norm(global_internal_force_matrix,np.inf)))
-        print("plastic strain",plastic_strain)
+        print("delta displacement",np.linalg.norm(delta_displacement,np.inf))
+        print("global dispkacement",(0.005 * np.linalg.norm(global_displacement,np.inf)))
+        print("reduced G",(np.linalg.norm(reduced_G_matrix,np.inf)))
+        print("global internal", (0.005*np.linalg.norm(global_internal_force_matrix,np.inf)))
+        # print("plastic strain",plastic_strain)
         if (np.linalg.norm(delta_displacement,np.inf) < (0.005 * np.linalg.norm(global_displacement,np.inf))) and ((np.linalg.norm(reduced_G_matrix,np.inf)) < (0.005*np.linalg.norm(global_internal_force_matrix,np.inf))):
             break
-    
+    global_plastic_strain = plastic_strain
     # global_plastic_strain = np.random.random((8,1))

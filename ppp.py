@@ -23,6 +23,7 @@ tau = 0
 time_step = 0.1
 total_time = 1
 
+
 '''***EXTERNAL LOADING***'''
 f_ext = 700  #Mpa
 yield_stress = 345 #Mpa    mild steel
@@ -108,14 +109,15 @@ def material_rotuine(poission_ratio, youngs_modulus,B_matrix,initial_displacemen
     C = c_1*np.array([[1-poission_ratio,poission_ratio,poission_ratio,0],
                       [poission_ratio,1-poission_ratio,poission_ratio,0],
                       [poission_ratio,poission_ratio,1-poission_ratio,0],
-                      [0,0,0,((1-poission_ratio)/2)]])
+                      [0,0,0,((1-2*poission_ratio)/2)]])
     
     elastic_strain = strain - global_plastic_strain[i]
+    print("global plastic strain",plastic_strain[i])
     # print("material rotuine")
     # print("Strain:",strain)
     # print("C:",C)
     trial_stress = np.dot(C,elastic_strain)
-    # print("TRIAL:",trial_stress)
+    print("TRIAL:",trial_stress)
     trial_stress_deviatoric = np.copy(trial_stress)
     trial_stress_deviatoric[:3] = trial_stress[:3] - ((1/3)*(trial_stress[0]+trial_stress[1]+trial_stress[2]))
     # print("trial_deviatoric",trial_stress_deviatoric)
@@ -126,12 +128,12 @@ def material_rotuine(poission_ratio, youngs_modulus,B_matrix,initial_displacemen
     # print(C)
     # print(trial_stress)
     # # print(strain)
-    # print("eq_stress",trial_stress_equivalent)
+    print("eq_stress",trial_stress_equivalent)
     if trial_stress_equivalent-yield_stress < 0:
         # print("elastic")
         print("C",C)
-        stress = trial_stress
-        return C, stress
+        # stress = trial_stress
+        return C, trial_stress
 
     else:
         # print("plastic")
@@ -139,21 +141,25 @@ def material_rotuine(poission_ratio, youngs_modulus,B_matrix,initial_displacemen
         # print(delta_lamda)
         # print(np.asscalar((trial_stress_equivalent-(3*mu*delta_lamda))/trial_stress_equivalent))
         current_1 = ((((1/3)*(trial_stress[0]+trial_stress[1]+trial_stress[2])*np.ones(4)).reshape(4,1)))
+        current_1[3] = 0
         current_stress = current_1 + (((((trial_stress_equivalent-(3*mu*delta_lamda)))/trial_stress_equivalent))*trial_stress_deviatoric)
         current_stress_deviatoric = np.copy(current_stress)
         current_stress_deviatoric[:3] = current_stress[:3] - ((1/3)*(current_stress[0]+current_stress[1]+current_stress[2]))
         current_stress_equivalent = (np.sqrt ((3/2)*(np.dot(current_stress_deviatoric.T,current_stress_deviatoric)))).item()
-        plastic_strain[i] = global_plastic_strain[i] + ((delta_lamda * 3/2) / current_stress_equivalent) * current_stress_deviatoric
-        # print(plastic_strain)
-        stress = current_stress
+        plastic_strain[i] = global_plastic_strain[i] + ((delta_lamda * 3/2) *(current_stress_equivalent / current_stress_deviatoric))
+        # print("plastic strain",plastic_strain[i])
+        print("current stress eq",current_stress_equivalent)
+        print("current stress ",current_stress)
+        # stress = current_stress
         c_t_1st = (1/3) * (3*lamda + 2*mu)*np.ones((4,4))
         identity_deviatoric = ((1/2)*(np.eye(4)+np.eye(4)))-((1/3)*np.ones((4,4)))
         c_t_2nd = (2*mu)*((trial_stress_equivalent-(3*mu*delta_lamda))/trial_stress_equivalent)*identity_deviatoric
         c_t_3rd = (3*mu / (trial_stress_equivalent)**2)*(trial_stress_deviatoric*trial_stress_deviatoric.reshape(1,4))
         C_t = c_t_1st + c_t_2nd - c_t_3rd
         # C_t[3,0] = C_t[3,1] = C_t[3,2] = C_t[0,3] = C_t[1,3] = C_t[2,3] = 0
+        
         print("C_t",C_t)
-        return C_t, stress
+        return C_t, current_stress
 '''
 ================================================================================================================================================================================================
 '''
@@ -403,8 +409,8 @@ while True:
         
         # print("global stiffness",global_stiffness_matrix)
         G_matrix =  (global_internal_force_matrix - (global_external_force_matrix*tau))
-        # print("global internal",global_internal_force_matrix)
-        # print("global external",global_external_force_matrix*tau)
+        print("global internal",global_internal_force_matrix)
+        print("global external",global_external_force_matrix*tau)
         print("G matrix",G_matrix)
 
         reduced_global_stiffness_matrix_1 = global_stiffness_matrix[2:,2:]
@@ -438,7 +444,7 @@ while True:
         # print("delta displacement",delta_displacement)
         # print("global_before",global_displacement)
         global_displacement =  global_displacement + delta_displacement 
-        # print("global_displacement",global_displacement)
+        print("global_displacement",global_displacement)
         # print("delta displac",delta_displacement.shape)
         # print("reduced g matrix",reduced_G_matrix)
         # print(global_internal_force_matrix)

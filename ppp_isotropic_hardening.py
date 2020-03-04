@@ -21,7 +21,7 @@ radius = 0.1   #mm
 
 '''***TIME PARAMETERS***'''
 tau = 0
-time_step = 0.1
+time_step = 0.01
 total_time = 1
 
 
@@ -127,7 +127,7 @@ def material_rotuine(poission_ratio, youngs_modulus,B_matrix,initial_displacemen
     trial_stress_deviatoric = np.copy(trial_stress)
     trial_stress_deviatoric[:3] = trial_stress[:3] - ((1/3)*(trial_stress[0]+trial_stress[1]+trial_stress[2]))
     print("trial_deviatoric",trial_stress_deviatoric)
-    n = (trial_stress_deviatoric/np.linalg.norm(trial_stress_deviatoric))
+    n = np.divide(trial_stress_deviatoric,np.linalg.norm(trial_stress_deviatoric),out=np.zeros_like(trial_stress_deviatoric),where=np.linalg.norm(trial_stress_deviatoric)!=0)
     print("n",n)
     trial_stress_equivalent = (np.sqrt(((3/2) * np.dot(trial_stress_deviatoric.T,trial_stress_deviatoric)))).item()
     # print(trial_stress)
@@ -169,12 +169,31 @@ def material_rotuine(poission_ratio, youngs_modulus,B_matrix,initial_displacemen
         alpha_updated[i,j] = alpha[i,j] + (np.sqrt(2/3)*(delta_lamda))
         print("Alpha", alpha_updated[i,j])
         # stress = current_stress
-        c_t_1st = (1/3) * (3*lamda + 2*mu)*np.ones((4,4))
+        beta_1 = 1-((phi/np.linalg.norm(trial_stress_deviatoric))*(1/(1+(hardening_modulus/3*mu))))
+        beta_2 = (1-(phi/np.linalg.norm(trial_stress_deviatoric)))*(1/(1+(hardening_modulus/3*mu)))
+        print("beta 1 ",beta_1)
+        print("beta 2",beta_2)
+        identity = np.ones((4,4))
+        identity[3,0] = identity[3,1] = identity[3,2] = identity[3,3] = identity[0,3] = identity[1,3] = identity[2,3] = 0
         identity_deviatoric = ((1/2)*(np.eye(4)+np.eye(4)))-((1/3)*np.ones((4,4)))
-        c_t_2nd = (2*mu)*((trial_stress_equivalent-(3*mu*delta_lamda))/trial_stress_equivalent)*identity_deviatoric
-        c_t_3rd = (((3*mu)*(3*mu))/((3*mu)+hardening_modulus))*((trial_stress_equivalent-(delta_lamda*hardening_modulus))/trial_stress_equivalent**3)*(trial_stress_deviatoric*trial_stress_deviatoric.reshape(1,4))
-        C_t = c_t_1st + c_t_2nd - c_t_3rd
-        C_t[3,0] = C_t[3,1] = C_t[3,2] = C_t[0,3] = C_t[1,3] = C_t[2,3] = 0
+        identity_deviatoric[3,0] = identity_deviatoric[3,1] = identity_deviatoric[3,2] = identity_deviatoric[0,3] = identity_deviatoric[1,3] = identity_deviatoric[2,3] = 0
+        identity_deviatoric[3,3] = 0.5
+        n_tensor = np.dot(n,n.T)
+        print("n_tensor", n_tensor)
+        c_t_1st = bulk * identity
+        print("c_t_1st",c_t_1st)
+        c_t_2nd = 2*mu*beta_1*identity_deviatoric
+        print("c_t_2nd",c_t_2nd)
+        c_t_3rd = 2*mu*beta_2*n_tensor
+        print("c_t_3nd",c_t_3rd)
+        c_t_deviatoric = c_t_2nd - c_t_3rd
+        print("c_t_dev",c_t_deviatoric)
+        C_t = c_t_deviatoric + c_t_1st
+
+
+
+        
+        
         
         print("C_t",C_t)
         return C_t, current_stress

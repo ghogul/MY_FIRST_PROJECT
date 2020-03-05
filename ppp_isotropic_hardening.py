@@ -21,7 +21,7 @@ radius = 0.1   #mm
 
 '''***TIME PARAMETERS***'''
 tau = 0
-time_step = 0.01
+time_step = 0.1
 total_time = 1
 
 
@@ -105,7 +105,10 @@ def material_rotuine(poission_ratio, youngs_modulus,B_matrix,initial_displacemen
     # print("plastic strain",global_plastic_strain)
     epsilon = np.dot(B_matrix , initial_displacement[i])
     strain = epsilon
-    
+    strain_deviatoric = np.copy(strain)
+    strain_deviatoric[:3] = (strain[:3] - ((1/3)*strain[1]+strain[2]+strain[3]))
+    strain_equivalent[i,j] = (np.sqrt(((3/2) * np.dot(strain_deviatoric.T,strain_deviatoric)))).item()
+    print("strain eq",strain_equivalent)
     print("strain",strain)
     print("initial displacement",initial_displacement[i])
     c_1 = (youngs_modulus)/((1+poission_ratio)*(1-2*poission_ratio))
@@ -143,6 +146,7 @@ def material_rotuine(poission_ratio, youngs_modulus,B_matrix,initial_displacemen
     if phi < 0:
         # print("elastic")
         print("C",C)
+        stress_equivalent[i,j] = trial_stress_equivalent
         # stress = trial_stress
         return C, trial_stress
 
@@ -163,6 +167,7 @@ def material_rotuine(poission_ratio, youngs_modulus,B_matrix,initial_displacemen
         current_stress_deviatoric = np.copy(current_stress)
         current_stress_deviatoric[:3] = current_stress[:3] - ((1/3)*(current_stress[0]+current_stress[1]+current_stress[2]))
         current_stress_equivalent = (np.sqrt ((3/2)*(np.dot(current_stress_deviatoric.T,current_stress_deviatoric)))).item()
+        stress_equivalent[i,j] = current_stress_equivalent
         print("current stress eq",current_stress_equivalent)
         # print("global plastic strain",global_plastic_strain[i])
         
@@ -363,7 +368,8 @@ a = np.array([])
 for i in summation:
     a = np.append(a,global_displacement[i])
 initial_displacement = a.reshape((nelm,isoparametric_edge*d_o_f,1))
-
+all_stress = np.array([])
+all_strain = np.array([])
 alpha = np.zeros((nelm,gauss_point,1))
 time = 0
 while True:
@@ -375,6 +381,8 @@ while True:
         break
     plastic_strain = np.zeros((nelm,gauss_point,isoparametric_edge,1))
     alpha_updated = np.zeros((nelm,gauss_point,1))
+    stress_equivalent = np.zeros((nelm,gauss_point,1))
+    strain_equivalent = np.zeros((nelm,gauss_point,1))
     k = 0
 # for i in range(0,1,10):
     print("="*30)
@@ -473,4 +481,15 @@ while True:
         if (np.linalg.norm(delta_displacement,np.inf) < (0.005 * np.linalg.norm(global_displacement,np.inf))) and ((np.linalg.norm(reduced_G_matrix,np.inf)) < (0.005*np.linalg.norm(global_internal_force_matrix,np.inf))):
             break
     global_plastic_strain = plastic_strain
+    all_stress = np.append(all_stress,np.sum(stress_equivalent)/(nelm*gauss_point))
+    all_strain = np.append(all_strain,np.sum(strain_equivalent)/(nelm*gauss_point))
+
     # global_plastic_strain = np.random.random((8,1))
+
+
+
+
+
+
+plt.scatter(all_strain,all_stress)
+plt.show()

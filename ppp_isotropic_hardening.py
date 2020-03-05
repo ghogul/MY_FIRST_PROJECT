@@ -21,7 +21,7 @@ radius = 0.1   #mm
 
 '''***TIME PARAMETERS***'''
 tau = 0
-time_step = 0.1
+time_step = 0.01
 total_time = 1
 
 
@@ -108,7 +108,7 @@ def material_rotuine(poission_ratio, youngs_modulus,B_matrix,initial_displacemen
     strain_deviatoric = np.copy(strain)
     strain_deviatoric[:3] = (strain[:3] - ((1/3)*strain[1]+strain[2]+strain[3]))
     strain_equivalent[i,j] = (np.sqrt(((3/2) * np.dot(strain_deviatoric.T,strain_deviatoric)))).item()
-    print("strain eq",strain_equivalent)
+    print("strain eq",strain_equivalent[i,j])
     print("strain",strain)
     print("initial displacement",initial_displacement[i])
     c_1 = (youngs_modulus)/((1+poission_ratio)*(1-2*poission_ratio))
@@ -140,7 +140,7 @@ def material_rotuine(poission_ratio, youngs_modulus,B_matrix,initial_displacemen
     # # print(strain)
     print("eq_stress",trial_stress_equivalent)
     print("alpha",alpha_updated[i,j])
-    beta = (hardening_modulus*alpha[i,j])
+    beta = (hardening_modulus*alpha[i,j]) + 00*(1-np.exp(-500*alpha[i,j]))
     print("Beta", beta)
     phi = np.linalg.norm(trial_stress_deviatoric) - (np.sqrt(2/3)*(yield_stress + beta))
     if phi < 0:
@@ -168,6 +168,7 @@ def material_rotuine(poission_ratio, youngs_modulus,B_matrix,initial_displacemen
         current_stress_deviatoric[:3] = current_stress[:3] - ((1/3)*(current_stress[0]+current_stress[1]+current_stress[2]))
         current_stress_equivalent = (np.sqrt ((3/2)*(np.dot(current_stress_deviatoric.T,current_stress_deviatoric)))).item()
         stress_equivalent[i,j] = current_stress_equivalent
+        print("current_stress_deviatoric", current_stress_deviatoric)
         print("current stress eq",current_stress_equivalent)
         # print("global plastic strain",global_plastic_strain[i])
         

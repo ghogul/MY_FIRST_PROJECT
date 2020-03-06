@@ -26,8 +26,8 @@ total_time = 1
 
 
 '''***EXTERNAL LOADING***'''
-f_ext = 515  #Mpa
-yield_stress = 205 #Mpa    mild steel
+f_ext = 1500  #Mpa
+yield_stress = 500 #Mpa    mild steel
 
 
 
@@ -140,7 +140,7 @@ def material_rotuine(poission_ratio, youngs_modulus,B_matrix,initial_displacemen
     # # print(strain)
     print("eq_stress",trial_stress_equivalent)
     print("alpha",alpha_updated[i,j])
-    beta = (hardening_modulus*alpha[i,j]) + 00*(1-np.exp(-500*alpha[i,j]))
+    beta = (hardening_modulus*alpha[i,j]) + 800*(1-np.exp(-25*alpha[i,j]))
     print("Beta", beta)
     phi = np.linalg.norm(trial_stress_deviatoric) - (np.sqrt(2/3)*(yield_stress + beta))
     if phi < 0:
@@ -341,24 +341,7 @@ def assignment_matrix(nelm,isoparametric_edge,d_o_f):
 ================================================================================================================================================================================================
 '''
 all_a,summation = assignment_matrix(nelm,isoparametric_edge,d_o_f)
-# global_displacement = np.array([[ 0.00000000e+00],
-#                                 [ 0.00000000e+00],
-#                                 [-2.29747886e-05],
-#                                 [ 0.00000000e+00],
-#                                 [-4.42676271e-05],
-#                                 [ 0.00000000e+00],
-#                                 [ 0.00000000e+00],
-#                                 [ 6.87719851e-04],
-#                                 [-1.90950872e-05],
-#                                 [ 6.85590208e-04],
-#                                 [-2.33514134e-05],
-#                                 [ 6.85101819e-04],
-#                                 [ 0.00000000e+00],
-#                                 [ 1.34326650e-03],
-#                                 [-1.36614683e-05],
-#                                 [ 1.33450682e-03],
-#                                 [ 5.24633588e-06],
-#                                 [ 1.33341851e-03]])
+
 global_displacement = np.zeros((no_nodes*d_o_f,1)) 
 global_plastic_strain = np.zeros((nelm,gauss_point,isoparametric_edge,1))
 
@@ -492,5 +475,5 @@ while True:
 
 
 
-plt.scatter(all_strain,all_stress)
+plt.plot(all_strain,all_stress)
 plt.show()

@@ -3,7 +3,6 @@ import matplotlib.pyplot as plt
 
 
 
-
 '''
 ================================================================================================================================================================================================
                                                                   INITIAL PARAMETERS
@@ -11,9 +10,10 @@ import matplotlib.pyplot as plt
 '''
 '''***MATERIAL PARAMETER***'''
 poission_ratio = 0.3
-youngs_modulus = 200000 #Mpa
+youngs_modulus = 210000 #Mpa
 hardening_modulus = 800 #Mpa
-
+delta_y = 800
+eta = 20
 
 '''***GEOMETRICAL PARAMETER***'''
 length = 50  #mm
@@ -27,8 +27,8 @@ total_time = 1
 
 
 '''***EXTERNAL LOADING***'''
-f_ext = 515  #Mpa
-yield_stress = 205 #Mpa    mild steel
+f_ext = 1500  #Mpa
+yield_stress = 500 #Mpa    mild steel
 
 
 
@@ -46,8 +46,8 @@ no_nodes = int((np.sqrt(nelm)+1)*(np.sqrt(nelm)+1))
 # length_element = 2.5
 
 '''***graphical representation of elements***'''
-nelm_length = (np.linspace(0,length,np.sqrt(nelm)+1))
-nelm_radius = (np.linspace(0,radius,np.sqrt(nelm)+1))
+nelm_length = np.linspace(0,length,np.sqrt(nelm)+1)
+nelm_radius = np.linspace(0,radius,np.sqrt(nelm)+1)
 yy,xx = np.meshgrid(nelm_length,nelm_radius)
 
 # fig, ax = plt.subplots()
@@ -84,7 +84,7 @@ def elements_coordinates(nelm,nelm_length,nelm_radius):
                         [nelm_radius[i+1],nelm_length[j]],
                         [nelm_radius[i+1],nelm_length[j+1]],
                         [nelm_radius[i],nelm_length[j+1]]]))
-            # ele_coord = ele_coord.reshape(4,2)
+            ele_coord = ele_coord.reshape((4,2))
             all_ele_coord_zeros = all_ele_coord[loop]+ele_coord  
             all_ele_coord[loop] = all_ele_coord_zeros
             loop += 1
@@ -141,7 +141,7 @@ def material_rotuine(poission_ratio, youngs_modulus,B_matrix,initial_displacemen
     # # print(strain)
     print("eq_stress",trial_stress_equivalent)
     print("alpha",alpha_updated[i,j])
-    beta = (hardening_modulus*alpha[i,j]) + 100*(1-np.exp(-5000*alpha[i,j]))
+    beta = (hardening_modulus*alpha[i,j]) + delta_y*(1-np.exp(-(eta)*alpha[i,j]))
     print("Beta", beta)
     phi = np.linalg.norm(trial_stress_deviatoric) - (np.sqrt(2/3)*(yield_stress + beta))
     if phi < 0:
@@ -478,7 +478,3 @@ while True:
 
 plt.plot(all_strain,all_stress)
 plt.show()
-
-
-
-

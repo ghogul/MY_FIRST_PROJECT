@@ -11,15 +11,19 @@ import matplotlib.pyplot as plt
 '''***MATERIAL PARAMETER***'''
 poission_ratio = 0.3
 youngs_modulus = 210000 #Mpa
-hardening_modulus = 800 #Mpa
-delta_y = 800
-eta = 20
-
+hardening_modulus = 250 #Mpa
+delta_y = 250
+eta = 3
+print("poisiion_ratio",poission_ratio)
+print("youngs_mpdulus",youngs_modulus)
+print("hardening_modulus",hardening_modulus)
+print("delta_y",delta_y)
+print("eta",eta)
 '''***GEOMETRICAL PARAMETER***'''
 length = 50  #mm
-radius = 0.1   #mm
-
-
+radius = 0.5   #mm
+print("length",length)
+print("radius",radius)
 '''***TIME PARAMETERS***'''
 tau = 0
 time_step = 0.01
@@ -27,10 +31,10 @@ total_time = 1
 
 
 '''***EXTERNAL LOADING***'''
-f_ext = 1500  #Mpa
+f_ext = 75000  #Mpa
 yield_stress = 500 #Mpa    mild steel
-
-
+print("f_ext",f_ext)
+print("yield_stress",yield_stress)
 
 '''***lame's constant***'''
 mu = (youngs_modulus/(2*(1+poission_ratio)))
@@ -120,6 +124,10 @@ def material_rotuine(poission_ratio, youngs_modulus,B_matrix,initial_displacemen
 
     
     elastic_strain = strain - global_plastic_strain[i,j]
+    elastic_strain_deviatoric = np.copy(elastic_strain)
+    elastic_strain_deviatoric[:3] = (strain[:3] - ((1/3)*strain[1]+strain[2]+strain[3]))
+    elastic_strain_equivalent = (np.sqrt(((3/2) * np.dot(elastic_strain_deviatoric.T,elastic_strain_deviatoric)))).item()
+
     print("global plastic strain predictor",global_plastic_strain[i,j])
     # print("elastic strain", elastic_strain)
     # print("material rotuine")
@@ -148,6 +156,7 @@ def material_rotuine(poission_ratio, youngs_modulus,B_matrix,initial_displacemen
         # print("elastic")
         print("C",C)
         stress_equivalent[i,j] = trial_stress_equivalent
+        elastic_plastic_strain_equivalent[i,j] = elastic_strain_equivalent
         # stress = trial_stress
         return C, trial_stress
 
@@ -157,6 +166,10 @@ def material_rotuine(poission_ratio, youngs_modulus,B_matrix,initial_displacemen
         delta_lamda = ((phi)/((2*mu)+((2/3)*hardening_modulus)))
         print("delta lamda",delta_lamda)
         plastic_strain[i,j] = global_plastic_strain[i,j] + (delta_lamda * n) 
+        current_plastic = plastic_strain[i,j]
+        plastic_strain_deviatoric = np.copy(plastic_strain[i,j])
+        plastic_strain_deviatoric[:3] = (current_plastic[:3] - ((1/3)*current_plastic[1]+current_plastic[2]+current_plastic[3]))
+        elastic_plastic_strain_equivalent[i,j] = (np.sqrt(((3/2) * np.dot(plastic_strain_deviatoric.T,plastic_strain_deviatoric)))).item()
         print("global plastic strain corrector",plastic_strain[i,j])
         current_stress = C*(strain - plastic_strain[i,j])
         # print(np.asscalar((trial_stress_equivalent-(3*mu*delta_lamda))/trial_stress_equivalent))
@@ -355,6 +368,7 @@ for i in summation:
 initial_displacement = a.reshape((nelm,isoparametric_edge*d_o_f,1))
 all_stress = np.array([])
 all_strain = np.array([])
+all_elastic_plastic_strain = np.array([])
 alpha = np.zeros((nelm,gauss_point,1))
 time = 0
 while True:
@@ -368,6 +382,7 @@ while True:
     alpha_updated = np.zeros((nelm,gauss_point,1))
     stress_equivalent = np.zeros((nelm,gauss_point,1))
     strain_equivalent = np.zeros((nelm,gauss_point,1))
+    elastic_plastic_strain_equivalent = np.zeros((nelm,gauss_point,1))
     k = 0
 # for i in range(0,1,10):
     print("="*30)
@@ -468,6 +483,7 @@ while True:
     global_plastic_strain = plastic_strain
     all_stress = np.append(all_stress,np.sum(stress_equivalent)/(nelm*gauss_point))
     all_strain = np.append(all_strain,np.sum(strain_equivalent)/(nelm*gauss_point))
+    all_elastic_plastic_strain = np.append(all_elastic_plastic_strain,np.sum(elastic_plastic_strain_equivalent)/(nelm*gauss_point))
 
     # global_plastic_strain = np.random.random((8,1))
 
@@ -475,6 +491,16 @@ while True:
 
 
 
+print("stress",all_stress)
+print("strain",all_strain)
+print("elastic_plastic",all_elastic_plastic_strain)
 
+# filename = "STRESS STRAIN.txt"
+# x = np.loadtxt(filename, usecols=(0))
+# y = np.loadtxt(filename, usecols=(1))
+# print(x.size)
+# print(y.size)
+# plt.plot(y,x)
 plt.plot(all_strain,all_stress)
+#plt.plot(all_elastic_plastic_strain,all_stress)
 plt.show()

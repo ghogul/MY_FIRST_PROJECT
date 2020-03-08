@@ -13,7 +13,7 @@ poission_ratio = 0.3
 youngs_modulus = 210000 #Mpa
 hardening_modulus = 250 #Mpa
 delta_y = 250
-eta = 3
+eta = 15
 print("poisiion_ratio",poission_ratio)
 print("youngs_mpdulus",youngs_modulus)
 print("hardening_modulus",hardening_modulus)
@@ -186,7 +186,7 @@ def material_rotuine(poission_ratio, youngs_modulus,B_matrix,initial_displacemen
         print("current stress eq",current_stress_equivalent)
         # print("global plastic strain",global_plastic_strain[i])
         
-        alpha_updated[i,j] = alpha[i,j] + (np.sqrt(2/3)*(delta_lamda))
+        alpha_updated[i,j] =  (np.sqrt(((3/2) * np.dot(plastic_strain_deviatoric.T,plastic_strain_deviatoric)))).item()
         print("Alpha", alpha_updated[i,j])
         # stress = current_stress
         beta_1 = 1-((phi/np.linalg.norm(trial_stress_deviatoric))*(1/(1+(hardening_modulus/3*mu))))
@@ -501,6 +501,6 @@ print("elastic_plastic",all_elastic_plastic_strain)
 # print(x.size)
 # print(y.size)
 # plt.plot(y,x)
-plt.plot(all_strain,all_stress)
+plt.scatter(all_strain,all_stress)
 #plt.plot(all_elastic_plastic_strain,all_stress)
 plt.show()

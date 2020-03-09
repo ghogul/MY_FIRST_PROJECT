@@ -28,7 +28,7 @@ print("radius",radius)
 tau = 0
 time_step = 0.01
 total_time = 1
-
+print("time_step",time_step)
 
 '''***EXTERNAL LOADING***'''
 f_ext = 75000  #Mpa
@@ -489,18 +489,24 @@ while True:
 
 
 
-
-
 print("stress",all_stress)
 print("strain",all_strain)
-print("elastic_plastic",all_elastic_plastic_strain)
 
+print("stress",all_stress.size)
+print("strain",all_strain.size)
+#print("elastic_plastic",all_elastic_plastic_strain)
+
+filename = "STRESS STRAIN.txt"
+
+exp_strain = np.loadtxt(filename, usecols=(1))
+exp_stress = np.loadtxt(filename, usecols=(0))
 # filename = "STRESS STRAIN.txt"
 # x = np.loadtxt(filename, usecols=(0))
 # y = np.loadtxt(filename, usecols=(1))
 # print(x.size)
 # print(y.size)
 # plt.plot(y,x)
-plt.scatter(all_strain,all_stress)
+plt.plot(exp_strain,exp_stress)
+plt.plot(all_strain,all_stress)
 #plt.plot(all_elastic_plastic_strain,all_stress)
 plt.show()
